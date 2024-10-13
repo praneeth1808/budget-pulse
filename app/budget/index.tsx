@@ -1,6 +1,6 @@
 // /app/budget/index.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -13,6 +13,7 @@ import BudgetComponents from "@/components/Budget/BudgetComponents"; // Updated 
 import BudgetEditModal from "@/components/Budget/BudgetEditModal"; // Updated path for BudgetEditModal component
 import Icon from "react-native-vector-icons/Ionicons"; // Import Ionicons for add button
 import budgetData from "@/assets/data/budgetData.json"; // Import the JSON file
+import { writeBudgetData } from "@/utils/budgetData"; // Function to update the JSON
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
@@ -32,6 +33,7 @@ export default function BudgetPage(): JSX.Element {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false); // State for modal visibility
   const [modalData, setModalData] = useState<ModalData | null>(null); // Data for the currently editing component
   const [isNewGoal, setIsNewGoal] = useState<boolean>(false); // State for adding a new goal
+
   const [components, setComponents] = useState(budgetData.goals); // Set the initial components from the JSON data
   const [totalAmount, setTotalAmount] = useState<number>(
     budgetData.totalAmount
@@ -40,14 +42,35 @@ export default function BudgetPage(): JSX.Element {
     budgetData.remainingAmount
   );
 
+  // Function to update the JSON file whenever the total or remaining amounts change
+  const updateBudgetData = () => {
+    const updatedData = {
+      totalAmount,
+      remainingAmount,
+      goals: components,
+    };
+    writeBudgetData(updatedData); // Update the JSON file
+  };
+
+  useEffect(() => {
+    updateBudgetData(); // Call this function whenever there is an update
+  }, [totalAmount, remainingAmount, components]);
+
+  // Function to handle editing the total amount
+  const handleEditAmount = (newTotalAmount: number): void => {
+    const difference = newTotalAmount - totalAmount;
+    setTotalAmount(newTotalAmount);
+    setRemainingAmount(remainingAmount + difference);
+  };
+
   // Function to handle adding an amount
   const handleAddAmount = (index: number): void => {
     const updatedComponents = [...components];
     updatedComponents[index].allocatedAmount += 100; // Add 100 for example
     setComponents(updatedComponents);
 
-    // Update JSON file
-    budgetData.goals[index].allocatedAmount += 100;
+    // Update remaining amount
+    setRemainingAmount(remainingAmount - 100);
   };
 
   // Function to handle reducing an amount
@@ -57,33 +80,15 @@ export default function BudgetPage(): JSX.Element {
       updatedComponents[index].allocatedAmount -= 100; // Reduce 100 for example
       setComponents(updatedComponents);
 
-      // Update JSON file
-      budgetData.goals[index].allocatedAmount -= 100;
+      // Update remaining amount
+      setRemainingAmount(remainingAmount + 100);
     }
-  };
-
-  // Function to handle editing total/remaining amounts
-  const handleEditAmount = (newTotalAmount: number) => {
-    setTotalAmount(newTotalAmount);
-    setRemainingAmount(
-      newTotalAmount -
-        components.reduce((acc, item) => acc + item.allocatedAmount, 0)
-    );
-
-    // Update JSON file
-    budgetData.totalAmount = newTotalAmount;
-    budgetData.remainingAmount =
-      newTotalAmount -
-      components.reduce((acc, item) => acc + item.allocatedAmount, 0);
   };
 
   // Function to handle deleting a component
   const handleDeleteComponent = (index: number): void => {
     const updatedComponents = components.filter((_, i) => i !== index);
     setComponents(updatedComponents);
-
-    // Update JSON file
-    budgetData.goals.splice(index, 1);
   };
 
   // Function to open the modal for editing
@@ -97,14 +102,10 @@ export default function BudgetPage(): JSX.Element {
   const handleSaveComponent = (updatedComponent: ModalData): void => {
     if (isNewGoal) {
       setComponents([...components, updatedComponent]); // Add a new goal
-      budgetData.goals.push(updatedComponent); // Add the new goal to the JSON
     } else if (updatedComponent.index !== undefined) {
       const updatedComponents = [...components];
       updatedComponents[updatedComponent.index] = updatedComponent;
       setComponents(updatedComponents); // Save edited component
-
-      // Update JSON file
-      budgetData.goals[updatedComponent.index] = updatedComponent;
     }
     setIsModalVisible(false);
     setIsNewGoal(false);
@@ -130,7 +131,7 @@ export default function BudgetPage(): JSX.Element {
 
   return (
     <View style={styles.container}>
-      {/* Use BudgetHeader component and pass the expanded state, along with total and remaining amounts */}
+      {/* Use BudgetHeader component and pass the expanded state */}
       <View
         style={{
           height: isHeaderExpanded ? screenHeight * 0.29 : screenHeight * 0.07, // Adjust height dynamically
@@ -141,7 +142,7 @@ export default function BudgetPage(): JSX.Element {
           toggleExpanded={toggleHeader}
           totalAmount={totalAmount}
           remainingAmount={remainingAmount}
-          onEditAmount={handleEditAmount} // Pass the handler for editing total and remaining amount
+          onEditAmount={handleEditAmount} // Pass the editing function
         />
       </View>
 
