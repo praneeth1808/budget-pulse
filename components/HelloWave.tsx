@@ -1,3 +1,4 @@
+//components/HelloWave.tsx
 import { StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
