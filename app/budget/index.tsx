@@ -1,6 +1,6 @@
 // /app/budget/index.tsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   StyleSheet,
@@ -32,8 +32,13 @@ export default function BudgetPage(): JSX.Element {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false); // State for modal visibility
   const [modalData, setModalData] = useState<ModalData | null>(null); // Data for the currently editing component
   const [isNewGoal, setIsNewGoal] = useState<boolean>(false); // State for adding a new goal
-
   const [components, setComponents] = useState(budgetData.goals); // Set the initial components from the JSON data
+  const [totalAmount, setTotalAmount] = useState<number>(
+    budgetData.totalAmount
+  );
+  const [remainingAmount, setRemainingAmount] = useState<number>(
+    budgetData.remainingAmount
+  );
 
   // Function to handle adding an amount
   const handleAddAmount = (index: number): void => {
@@ -55,6 +60,21 @@ export default function BudgetPage(): JSX.Element {
       // Update JSON file
       budgetData.goals[index].allocatedAmount -= 100;
     }
+  };
+
+  // Function to handle editing total/remaining amounts
+  const handleEditAmount = (newTotalAmount: number) => {
+    setTotalAmount(newTotalAmount);
+    setRemainingAmount(
+      newTotalAmount -
+        components.reduce((acc, item) => acc + item.allocatedAmount, 0)
+    );
+
+    // Update JSON file
+    budgetData.totalAmount = newTotalAmount;
+    budgetData.remainingAmount =
+      newTotalAmount -
+      components.reduce((acc, item) => acc + item.allocatedAmount, 0);
   };
 
   // Function to handle deleting a component
@@ -110,7 +130,7 @@ export default function BudgetPage(): JSX.Element {
 
   return (
     <View style={styles.container}>
-      {/* Use BudgetHeader component and pass the expanded state */}
+      {/* Use BudgetHeader component and pass the expanded state, along with total and remaining amounts */}
       <View
         style={{
           height: isHeaderExpanded ? screenHeight * 0.29 : screenHeight * 0.07, // Adjust height dynamically
@@ -119,6 +139,9 @@ export default function BudgetPage(): JSX.Element {
         <BudgetHeader
           isExpanded={isHeaderExpanded}
           toggleExpanded={toggleHeader}
+          totalAmount={totalAmount}
+          remainingAmount={remainingAmount}
+          onEditAmount={handleEditAmount} // Pass the handler for editing total and remaining amount
         />
       </View>
 
