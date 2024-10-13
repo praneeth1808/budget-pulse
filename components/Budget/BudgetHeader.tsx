@@ -14,6 +14,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { LineChart } from "react-native-chart-kit"; // Assuming you're using 'react-native-chart-kit' for graphs
 import { Dimensions } from "react-native";
 import * as FileSystem from "expo-file-system"; // Import expo-file-system for downloading files
+import * as Sharing from "expo-sharing";
 import { TextInput } from "react-native"; // For edit modal
 
 // Check if we are on web or mobile
@@ -55,7 +56,8 @@ export default function BudgetHeader({
     console.log("Downloading budget data...");
     console.log(budgetData); // Log the budget data to verify
     const fileData = JSON.stringify(budgetData);
-    if (isWeb) {
+
+    if (Platform.OS === "web") {
       // For web: create a download link and trigger it
       const blob = new Blob([fileData], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -66,14 +68,29 @@ export default function BudgetHeader({
       link.click();
       document.body.removeChild(link);
     } else {
-      // For mobile: Save the file to the filesystem
-      const fileUri = FileSystem.documentDirectory + "budgetData.json";
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(budgetData), {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      try {
+        // For mobile: Save the file to the filesystem
+        const fileUri = FileSystem.documentDirectory + "budgetData.json";
 
-      // Optionally add sharing functionality for mobile platforms
-      console.log("File saved at:", fileUri);
+        await FileSystem.writeAsStringAsync(fileUri, fileData, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+
+        // Share the file using the expo-sharing module
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: "application/json",
+            dialogTitle: "Download your budget data",
+            UTI: "public.json", // Uniform Type Identifier for JSON
+          });
+        } else {
+          console.log("Sharing is not available on this device.");
+        }
+
+        console.log("File saved at:", fileUri);
+      } catch (error) {
+        console.error("Error saving the file:", error);
+      }
     }
   };
 

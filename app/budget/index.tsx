@@ -55,8 +55,8 @@ export default function BudgetPage(): JSX.Element {
       if (fileExists.exists) {
         const data = await FileSystem.readAsStringAsync(BUDGET_FILE_PATH);
         const parsedData = JSON.parse(data);
-
-        setTotalAmount(parsedData.totalAmount);
+        setTotalAmount(parsedData.totalAmount || 0);
+        parsedData.goals = parsedData.goals || [];
         setComponents(
           parsedData.goals.map((goal: any) => ({
             ...goal,
@@ -240,7 +240,7 @@ export default function BudgetPage(): JSX.Element {
           totalAmount={totalAmount} // Get totalAmount from JSON
           remainingAmount={remainingAmount} // Dynamically calculated remainingAmount
           onEditAmount={handleEditTotalAmount} // Handle edit for totalAmount
-          budgetData={{}}
+          budgetData={{ totalAmount, goals: components }}
         />
       </View>
 
