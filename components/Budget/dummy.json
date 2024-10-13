@@ -1,0 +1,11 @@
+{
+  "assets": [
+    {
+      "mimeType": "application/json",
+      "name": "budgetData.json",
+      "size": 794,
+      "uri": "file:///var/mobile/Containers/Data/Application/1C6E179B-37C1-4D4B-AC9B-592F2865F5C6/Library/Caches/ExponentExperienceData/@anonymous/BudgetPulse-bb483249-9e65-43ee-a135-d0e6a0ad9c74/DocumentPicker/3AD66C77-7EF2-499C-9AA1-72E5B0056E19.json"
+    }
+  ],
+  "canceled": false
+}

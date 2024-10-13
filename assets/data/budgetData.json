@@ -1,5 +1,5 @@
 {
-  "totalAmount": 1200,
+  "totalAmount": 1500,
   "remainingAmount": 700,
   "goals": [
     {
@@ -28,6 +28,27 @@
       "allocatedAmount": 150,
       "targetAmount": 200,
       "targetDate": "Jan 2025",
+      "type": "EmergencyFund"
+    },
+    {
+      "title": "Home Renovation",
+      "allocatedAmount": 500,
+      "targetAmount": 1000,
+      "targetDate": "Aug 2025",
+      "type": "Goal"
+    },
+    {
+      "title": "Wedding Expenses",
+      "allocatedAmount": 400,
+      "targetAmount": 1500,
+      "targetDate": "May 2025",
+      "type": "Want"
+    },
+    {
+      "title": "College Fund",
+      "allocatedAmount": 800,
+      "targetAmount": 2000,
+      "targetDate": "Dec 2026",
       "type": "EmergencyFund"
     }
   ]

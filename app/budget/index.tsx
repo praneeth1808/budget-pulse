@@ -1,5 +1,4 @@
 // /app/budget/index.tsx
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -7,15 +6,20 @@ import {
   Dimensions,
   TouchableOpacity,
   Text,
+  Platform,
 } from "react-native";
 import BudgetHeader from "@/components/Budget/BudgetHeader"; // Import BudgetHeader component
 import BudgetComponents from "@/components/Budget/BudgetComponents"; // Updated path for BudgetComponents container
 import BudgetEditModal from "@/components/Budget/BudgetEditModal"; // Updated path for BudgetEditModal component
 import Icon from "react-native-vector-icons/Ionicons"; // Import Ionicons for add button
-import budgetData from "@/assets/data/budgetData.json"; // Import the JSON file
+import * as FileSystem from "expo-file-system"; // For reading the JSON file (only for mobile)
+import { writeBudgetData } from "@/utils/budgetData"; // Function to update the JSON file
+import AsyncStorage from "@react-native-async-storage/async-storage"; // For web storage
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
+
+const BUDGET_FILE_PATH = `${FileSystem.documentDirectory}budgetData.json`; // Path to the budgetData JSON file (for mobile)
 
 // Define a type for modalData
 interface ModalData {
@@ -23,8 +27,16 @@ interface ModalData {
   allocatedAmount: number;
   targetAmount: number;
   targetDate: string;
-  type: "Goal" | "Want" | "EmergencyFund";
+  type: "Goal" | "Want" | "EmergencyFund"; // Correct type here
   index?: number; // Optional index
+}
+
+interface BudgetComponentData {
+  title: string;
+  allocatedAmount: number;
+  targetAmount: number;
+  targetDate: string;
+  type: "Goal" | "Want" | "EmergencyFund"; // Correct type here
 }
 
 export default function BudgetPage(): JSX.Element {
@@ -32,8 +44,118 @@ export default function BudgetPage(): JSX.Element {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false); // State for modal visibility
   const [modalData, setModalData] = useState<ModalData | null>(null); // Data for the currently editing component
   const [isNewGoal, setIsNewGoal] = useState<boolean>(false); // State for adding a new goal
+  const [totalAmount, setTotalAmount] = useState<number>(0); // Dynamically get totalAmount from JSON
+  const [remainingAmount, setRemainingAmount] = useState<number>(0); // Initial value for remainingAmount
+  const [components, setComponents] = useState<BudgetComponentData[]>([]); // Initialize components state
 
-  const [components, setComponents] = useState(budgetData.goals); // Set the initial components from the JSON data
+  // Function to load data from the JSON file for mobile
+  const loadBudgetDataMobile = async () => {
+    try {
+      const fileExists = await FileSystem.getInfoAsync(BUDGET_FILE_PATH);
+      if (fileExists.exists) {
+        const data = await FileSystem.readAsStringAsync(BUDGET_FILE_PATH);
+        const parsedData = JSON.parse(data);
+        setTotalAmount(parsedData.totalAmount || 0);
+        parsedData.goals = parsedData.goals || [];
+        setComponents(
+          parsedData.goals.map((goal: any) => ({
+            ...goal,
+            type: goal.type as "Goal" | "Want" | "EmergencyFund", // Ensure type matches
+          }))
+        );
+      } else {
+        console.log("Budget data file not found");
+      }
+    } catch (error) {
+      console.error("Error reading budget data:", error);
+    }
+  };
+
+  // Function to load data from AsyncStorage for web
+  const loadBudgetDataWeb = async () => {
+    try {
+      const data = await AsyncStorage.getItem("budgetData");
+      if (data) {
+        const parsedData = JSON.parse(data);
+        setTotalAmount(parsedData.totalAmount);
+        setComponents(
+          parsedData.goals.map((goal: any) => ({
+            ...goal,
+            type: goal.type as "Goal" | "Want" | "EmergencyFund", // Ensure type matches
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error reading budget data from AsyncStorage:", error);
+    }
+  };
+
+  // Add this in BudgetPage.tsx (parent component)
+  const handleUpload = (uploadedData: any) => {
+    // Update the budgetData with the uploaded file's data
+    setTotalAmount(uploadedData.totalAmount);
+    setComponents(
+      uploadedData.goals.map((goal: any) => ({
+        ...goal,
+        type: goal.type as "Goal" | "Want" | "EmergencyFund",
+      }))
+    );
+  };
+
+  // Call the load function when the component mounts based on the platform
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      loadBudgetDataWeb();
+    } else {
+      loadBudgetDataMobile();
+    }
+  }, []);
+
+  // Calculate the remainingAmount dynamically
+  useEffect(() => {
+    const remaining =
+      totalAmount -
+      components.reduce(
+        (allocatedSum, component) => allocatedSum + component.allocatedAmount,
+        0
+      );
+    setRemainingAmount(remaining);
+  }, [totalAmount, components]);
+
+  // Function to write updated components to the JSON file for mobile
+  const updateJsonFileMobile = async () => {
+    const updatedData = {
+      totalAmount, // Save the updated total amount
+      goals: components,
+    };
+    try {
+      await writeBudgetData(updatedData); // Write the data for mobile
+    } catch (error) {
+      console.error("Error updating budget data on mobile:", error);
+    }
+  };
+
+  // Function to write updated components to AsyncStorage for web
+  const updateJsonFileWeb = async () => {
+    const updatedData = {
+      totalAmount, // Save the updated total amount
+      goals: components,
+    };
+    try {
+      await AsyncStorage.setItem("budgetData", JSON.stringify(updatedData));
+    } catch (error) {
+      console.error("Error updating budget data in AsyncStorage:", error);
+    }
+  };
+
+  // Function to update the JSON file based on the platform
+  const updateJsonFile = () => {
+    if (Platform.OS === "web") {
+      updateJsonFileWeb();
+    } else {
+      updateJsonFileMobile();
+    }
+  };
 
   // Function to handle adding an amount
   const handleAddAmount = (index: number): void => {
@@ -41,8 +163,8 @@ export default function BudgetPage(): JSX.Element {
     updatedComponents[index].allocatedAmount += 100; // Add 100 for example
     setComponents(updatedComponents);
 
-    // Update JSON file
-    budgetData.goals[index].allocatedAmount += 100;
+    // Update the JSON file
+    updateJsonFile();
   };
 
   // Function to handle reducing an amount
@@ -52,8 +174,8 @@ export default function BudgetPage(): JSX.Element {
       updatedComponents[index].allocatedAmount -= 100; // Reduce 100 for example
       setComponents(updatedComponents);
 
-      // Update JSON file
-      budgetData.goals[index].allocatedAmount -= 100;
+      // Update the JSON file
+      updateJsonFile();
     }
   };
 
@@ -62,14 +184,14 @@ export default function BudgetPage(): JSX.Element {
     const updatedComponents = components.filter((_, i) => i !== index);
     setComponents(updatedComponents);
 
-    // Update JSON file
-    budgetData.goals.splice(index, 1);
+    // Update the JSON file
+    updateJsonFile();
   };
 
   // Function to open the modal for editing
   const handleEditComponent = (index: number): void => {
     setIsNewGoal(false);
-    setModalData({ ...components[index], index } as ModalData); // Add type assertion
+    setModalData({ ...components[index], index } as ModalData); // Pass index to modal
     setIsModalVisible(true);
   };
 
@@ -77,15 +199,15 @@ export default function BudgetPage(): JSX.Element {
   const handleSaveComponent = (updatedComponent: ModalData): void => {
     if (isNewGoal) {
       setComponents([...components, updatedComponent]); // Add a new goal
-      budgetData.goals.push(updatedComponent); // Add the new goal to the JSON
     } else if (updatedComponent.index !== undefined) {
       const updatedComponents = [...components];
       updatedComponents[updatedComponent.index] = updatedComponent;
       setComponents(updatedComponents); // Save edited component
-
-      // Update JSON file
-      budgetData.goals[updatedComponent.index] = updatedComponent;
     }
+
+    // Update the JSON file
+    updateJsonFile();
+
     setIsModalVisible(false);
     setIsNewGoal(false);
   };
@@ -97,10 +219,18 @@ export default function BudgetPage(): JSX.Element {
       allocatedAmount: 0,
       targetAmount: 1000,
       targetDate: "Dec 2025",
-      type: "Goal",
+      type: "Goal", // Default to "Goal" for new entries
     });
     setIsNewGoal(true);
     setIsModalVisible(true);
+  };
+
+  // Function to handle editing the total amount
+  const handleEditTotalAmount = (newTotalAmount: number): void => {
+    setTotalAmount(newTotalAmount); // Update totalAmount state
+
+    // Update the JSON file
+    updateJsonFile();
   };
 
   // Toggle the expand/collapse state for the header
@@ -119,6 +249,11 @@ export default function BudgetPage(): JSX.Element {
         <BudgetHeader
           isExpanded={isHeaderExpanded}
           toggleExpanded={toggleHeader}
+          totalAmount={totalAmount} // Get totalAmount from JSON
+          remainingAmount={remainingAmount} // Dynamically calculated remainingAmount
+          onEditAmount={handleEditTotalAmount} // Handle edit for totalAmount
+          onUpload={handleUpload}
+          budgetData={{ totalAmount, goals: components }}
         />
       </View>
 
@@ -150,7 +285,7 @@ export default function BudgetPage(): JSX.Element {
             allocatedAmount: component.allocatedAmount,
             targetAmount: component.targetAmount,
             targetDate: component.targetDate,
-            type: component.type as "Goal" | "Want" | "EmergencyFund",
+            type: component.type as "Goal" | "Want" | "EmergencyFund", // Ensure the correct type is passed
             onAddAmount: () => handleAddAmount(index),
             onReduceAmount: () => handleReduceAmount(index),
             onDeleteComponent: () => handleDeleteComponent(index),

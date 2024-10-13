@@ -1,6 +1,6 @@
 //components/Budget/BudgetComponent.tsx
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons"; // Import icons for edit/delete
 import { ProgressBar } from "react-native-paper"; // ProgressBar component
 import { Dimensions } from "react-native";
@@ -14,7 +14,7 @@ interface BudgetComponentProps {
   onAddAmount: () => void;
   onReduceAmount: () => void;
   onDeleteComponent: () => void;
-  onEditComponent: () => void; // New edit function
+  onEditComponent: () => void; // Ensure this function is passed correctly
 }
 
 export default function BudgetComponent({
@@ -26,10 +26,8 @@ export default function BudgetComponent({
   onAddAmount,
   onReduceAmount,
   onDeleteComponent,
-  onEditComponent, // Add edit function
+  onEditComponent, // Correctly wire this function to the component
 }: BudgetComponentProps): JSX.Element {
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-
   // Determine color based on component type
   const getColor = (): string => {
     switch (type) {
@@ -53,6 +51,7 @@ export default function BudgetComponent({
         <Text style={styles.title}>{title}</Text>
         <View style={styles.actions}>
           <TouchableOpacity onPress={onEditComponent}>
+            {/* Ensure this triggers the edit */}
             <Icon name="create-outline" size={22} color={getColor()} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onDeleteComponent}>
