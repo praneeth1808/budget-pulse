@@ -1,5 +1,4 @@
 // /app/budget/index.tsx
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -13,7 +12,7 @@ import BudgetComponents from "@/components/Budget/BudgetComponents"; // Updated 
 import BudgetEditModal from "@/components/Budget/BudgetEditModal"; // Updated path for BudgetEditModal component
 import Icon from "react-native-vector-icons/Ionicons"; // Import Ionicons for add button
 import budgetData from "@/assets/data/budgetData.json"; // Import the JSON file
-import { writeBudgetData } from "@/utils/budgetData"; // Function to update the JSON
+import { writeBudgetData } from "@/utils/budgetData"; // Function to update the JSON file
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
@@ -24,8 +23,16 @@ interface ModalData {
   allocatedAmount: number;
   targetAmount: number;
   targetDate: string;
-  type: "Goal" | "Want" | "EmergencyFund";
+  type: "Goal" | "Want" | "EmergencyFund"; // Correct type here
   index?: number; // Optional index
+}
+
+interface BudgetComponentData {
+  title: string;
+  allocatedAmount: number;
+  targetAmount: number;
+  targetDate: string;
+  type: "Goal" | "Want" | "EmergencyFund"; // Correct type here
 }
 
 export default function BudgetPage(): JSX.Element {
@@ -33,34 +40,38 @@ export default function BudgetPage(): JSX.Element {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false); // State for modal visibility
   const [modalData, setModalData] = useState<ModalData | null>(null); // Data for the currently editing component
   const [isNewGoal, setIsNewGoal] = useState<boolean>(false); // State for adding a new goal
-
-  const [components, setComponents] = useState(budgetData.goals); // Set the initial components from the JSON data
   const [totalAmount, setTotalAmount] = useState<number>(
     budgetData.totalAmount
-  );
-  const [remainingAmount, setRemainingAmount] = useState<number>(
-    budgetData.remainingAmount
+  ); // Dynamically get totalAmount from JSON
+  const [remainingAmount, setRemainingAmount] = useState<number>(0); // Initial value for remainingAmount
+
+  // Ensure that all data passed has the correct type by validating it
+  const [components, setComponents] = useState<BudgetComponentData[]>(
+    budgetData.goals.map((goal: any) => ({
+      ...goal,
+      type: goal.type as "Goal" | "Want" | "EmergencyFund", // Ensure type matches
+    }))
   );
 
-  // Function to update the JSON file whenever the total or remaining amounts change
-  const updateBudgetData = () => {
+  // Calculate the remainingAmount dynamically
+  useEffect(() => {
+    const remaining =
+      totalAmount -
+      components.reduce(
+        (allocatedSum, component) => allocatedSum + component.allocatedAmount,
+        0
+      );
+    setRemainingAmount(remaining);
+  }, [totalAmount, components]);
+
+  // Function to write updated components to the JSON file
+  const updateJsonFile = () => {
     const updatedData = {
-      totalAmount,
-      remainingAmount,
+      ...budgetData,
+      totalAmount, // Save the updated total amount
       goals: components,
     };
-    writeBudgetData(updatedData); // Update the JSON file
-  };
-
-  useEffect(() => {
-    updateBudgetData(); // Call this function whenever there is an update
-  }, [totalAmount, remainingAmount, components]);
-
-  // Function to handle editing the total amount
-  const handleEditAmount = (newTotalAmount: number): void => {
-    const difference = newTotalAmount - totalAmount;
-    setTotalAmount(newTotalAmount);
-    setRemainingAmount(remainingAmount + difference);
+    writeBudgetData(updatedData); // Call the function to write to JSON file
   };
 
   // Function to handle adding an amount
@@ -69,8 +80,8 @@ export default function BudgetPage(): JSX.Element {
     updatedComponents[index].allocatedAmount += 100; // Add 100 for example
     setComponents(updatedComponents);
 
-    // Update remaining amount
-    setRemainingAmount(remainingAmount - 100);
+    // Update the JSON file
+    updateJsonFile();
   };
 
   // Function to handle reducing an amount
@@ -80,8 +91,8 @@ export default function BudgetPage(): JSX.Element {
       updatedComponents[index].allocatedAmount -= 100; // Reduce 100 for example
       setComponents(updatedComponents);
 
-      // Update remaining amount
-      setRemainingAmount(remainingAmount + 100);
+      // Update the JSON file
+      updateJsonFile();
     }
   };
 
@@ -89,12 +100,15 @@ export default function BudgetPage(): JSX.Element {
   const handleDeleteComponent = (index: number): void => {
     const updatedComponents = components.filter((_, i) => i !== index);
     setComponents(updatedComponents);
+
+    // Update the JSON file
+    updateJsonFile();
   };
 
   // Function to open the modal for editing
   const handleEditComponent = (index: number): void => {
     setIsNewGoal(false);
-    setModalData({ ...components[index], index } as ModalData); // Add type assertion
+    setModalData({ ...components[index], index } as ModalData); // Pass index to modal
     setIsModalVisible(true);
   };
 
@@ -102,11 +116,25 @@ export default function BudgetPage(): JSX.Element {
   const handleSaveComponent = (updatedComponent: ModalData): void => {
     if (isNewGoal) {
       setComponents([...components, updatedComponent]); // Add a new goal
+      budgetData.goals.push(updatedComponent); // Add the new goal to the JSON
+      writeBudgetData(budgetData);
     } else if (updatedComponent.index !== undefined) {
       const updatedComponents = [...components];
       updatedComponents[updatedComponent.index] = updatedComponent;
+
+      const updatedData = {
+        ...budgetData,
+        totalAmount, // Save the updated total amount
+        goals: updatedComponents,
+      };
+      writeBudgetData(updatedData);
+
       setComponents(updatedComponents); // Save edited component
     }
+
+    // Update the JSON file
+    updateJsonFile();
+
     setIsModalVisible(false);
     setIsNewGoal(false);
   };
@@ -118,10 +146,18 @@ export default function BudgetPage(): JSX.Element {
       allocatedAmount: 0,
       targetAmount: 1000,
       targetDate: "Dec 2025",
-      type: "Goal",
+      type: "Goal", // Default to "Goal" for new entries
     });
     setIsNewGoal(true);
     setIsModalVisible(true);
+  };
+
+  // Function to handle editing the total amount
+  const handleEditTotalAmount = (newTotalAmount: number): void => {
+    setTotalAmount(newTotalAmount); // Update totalAmount state
+
+    // Update the JSON file
+    updateJsonFile();
   };
 
   // Toggle the expand/collapse state for the header
@@ -140,9 +176,9 @@ export default function BudgetPage(): JSX.Element {
         <BudgetHeader
           isExpanded={isHeaderExpanded}
           toggleExpanded={toggleHeader}
-          totalAmount={totalAmount}
-          remainingAmount={remainingAmount}
-          onEditAmount={handleEditAmount} // Pass the editing function
+          totalAmount={totalAmount} // Get totalAmount from JSON
+          remainingAmount={remainingAmount} // Dynamically calculated remainingAmount
+          onEditAmount={handleEditTotalAmount} // Handle edit for totalAmount
         />
       </View>
 
@@ -174,7 +210,7 @@ export default function BudgetPage(): JSX.Element {
             allocatedAmount: component.allocatedAmount,
             targetAmount: component.targetAmount,
             targetDate: component.targetDate,
-            type: component.type as "Goal" | "Want" | "EmergencyFund",
+            type: component.type as "Goal" | "Want" | "EmergencyFund", // Ensure the correct type is passed
             onAddAmount: () => handleAddAmount(index),
             onReduceAmount: () => handleReduceAmount(index),
             onDeleteComponent: () => handleDeleteComponent(index),

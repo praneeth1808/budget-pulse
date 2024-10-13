@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
-  Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons"; // Import icons for actions
 
@@ -17,7 +16,8 @@ interface BudgetEditModalProps {
     allocatedAmount: number;
     targetAmount: number;
     targetDate: string;
-    type: "Goal" | "Want" | "EmergencyFund";
+    type: "Goal" | "Want" | "EmergencyFund"; // Correct type here
+    index?: number; // Added index to track which component to edit
   };
   onSave: (data: any) => void;
   onClose: () => void;
@@ -43,7 +43,15 @@ export default function BudgetEditModal({
   );
 
   const handleSave = (): void => {
-    onSave({ title, allocatedAmount, targetAmount, targetDate, type });
+    const updatedComponent = {
+      ...componentData, // Keep the original data
+      title,
+      allocatedAmount,
+      targetAmount,
+      targetDate,
+      type,
+    };
+    onSave(updatedComponent); // Call onSave with the updated component
   };
 
   return (

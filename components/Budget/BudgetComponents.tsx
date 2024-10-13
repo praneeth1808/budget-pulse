@@ -1,20 +1,22 @@
 // /components/Budget/BudgetComponents.tsx
 import React from "react";
 import { ScrollView, View, StyleSheet } from "react-native";
-import BudgetComponent from "@/components/Budget/BudgetComponent";
+import BudgetComponent from "@/components/Budget/BudgetComponent"; // Import the individual budget component
 
+// Define the props for each budget component data
 interface BudgetComponentData {
   title: string;
   allocatedAmount: number;
   targetAmount: number;
   targetDate: string;
-  type: "Goal" | "Want" | "EmergencyFund";
+  type: "Goal" | "Want" | "EmergencyFund"; // Correct type here
   onAddAmount: () => void;
   onReduceAmount: () => void;
   onDeleteComponent: () => void;
-  onEditComponent: () => void;
+  onEditComponent: () => void; // Edit function
 }
 
+// Define the props for the BudgetComponents container
 interface BudgetComponentsProps {
   components: BudgetComponentData[];
 }
@@ -29,6 +31,7 @@ export default function BudgetComponents({
     >
       {components
         .sort((a, b) => {
+          // Sorting logic to ensure goals come first, followed by wants, then emergency funds
           const order = { Goal: 1, Want: 2, EmergencyFund: 3 };
           return order[a.type] - order[b.type];
         })
@@ -43,7 +46,7 @@ export default function BudgetComponents({
               onAddAmount={component.onAddAmount}
               onReduceAmount={component.onReduceAmount}
               onDeleteComponent={component.onDeleteComponent}
-              onEditComponent={component.onEditComponent}
+              onEditComponent={component.onEditComponent} // Pass edit function
             />
           </View>
         ))}
