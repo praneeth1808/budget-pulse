@@ -1,4 +1,5 @@
 // /app/budget/index.tsx
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -11,31 +12,37 @@ import BudgetHeader from "@/components/Budget/BudgetHeader"; // Import BudgetHea
 import BudgetComponents from "@/components/Budget/BudgetComponents"; // Updated path for BudgetComponents container
 import BudgetEditModal from "@/components/Budget/BudgetEditModal"; // Updated path for BudgetEditModal component
 import Icon from "react-native-vector-icons/Ionicons"; // Import Ionicons for add button
-
-// Import the JSON file for budget data
-import budgetData from "@/assets/data/budgetData.json"; // Ensure the path is correct
+import budgetData from "@/assets/data/budgetData.json"; // Import the JSON file
 
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
 
+// Define a type for modalData
+interface ModalData {
+  title: string;
+  allocatedAmount: number;
+  targetAmount: number;
+  targetDate: string;
+  type: "Goal" | "Want" | "EmergencyFund";
+  index?: number; // Optional index
+}
+
 export default function BudgetPage(): JSX.Element {
   const [isHeaderExpanded, setIsHeaderExpanded] = useState<boolean>(false); // State to manage the header's expand/collapse
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false); // State for modal visibility
-  const [modalData, setModalData] = useState<any>(null); // Data for the currently editing component
+  const [modalData, setModalData] = useState<ModalData | null>(null); // Data for the currently editing component
   const [isNewGoal, setIsNewGoal] = useState<boolean>(false); // State for adding a new goal
-  const [components, setComponents] = useState<any[]>([]); // State for budget components
 
-  // Load the data from the JSON file when the component mounts
-  useEffect(() => {
-    // You can use budgetData directly since it's already imported
-    setComponents(budgetData.components);
-  }, []);
+  const [components, setComponents] = useState(budgetData.goals); // Set the initial components from the JSON data
 
   // Function to handle adding an amount
   const handleAddAmount = (index: number): void => {
     const updatedComponents = [...components];
     updatedComponents[index].allocatedAmount += 100; // Add 100 for example
     setComponents(updatedComponents);
+
+    // Update JSON file
+    budgetData.goals[index].allocatedAmount += 100;
   };
 
   // Function to handle reducing an amount
@@ -44,6 +51,9 @@ export default function BudgetPage(): JSX.Element {
     if (updatedComponents[index].allocatedAmount > 0) {
       updatedComponents[index].allocatedAmount -= 100; // Reduce 100 for example
       setComponents(updatedComponents);
+
+      // Update JSON file
+      budgetData.goals[index].allocatedAmount -= 100;
     }
   };
 
@@ -51,23 +61,30 @@ export default function BudgetPage(): JSX.Element {
   const handleDeleteComponent = (index: number): void => {
     const updatedComponents = components.filter((_, i) => i !== index);
     setComponents(updatedComponents);
+
+    // Update JSON file
+    budgetData.goals.splice(index, 1);
   };
 
   // Function to open the modal for editing
   const handleEditComponent = (index: number): void => {
     setIsNewGoal(false);
-    setModalData({ ...components[index], index });
+    setModalData({ ...components[index], index } as ModalData); // Add type assertion
     setIsModalVisible(true);
   };
 
   // Function to save the updated component
-  const handleSaveComponent = (updatedComponent: any): void => {
+  const handleSaveComponent = (updatedComponent: ModalData): void => {
     if (isNewGoal) {
       setComponents([...components, updatedComponent]); // Add a new goal
+      budgetData.goals.push(updatedComponent); // Add the new goal to the JSON
     } else if (updatedComponent.index !== undefined) {
       const updatedComponents = [...components];
       updatedComponents[updatedComponent.index] = updatedComponent;
       setComponents(updatedComponents); // Save edited component
+
+      // Update JSON file
+      budgetData.goals[updatedComponent.index] = updatedComponent;
     }
     setIsModalVisible(false);
     setIsNewGoal(false);
