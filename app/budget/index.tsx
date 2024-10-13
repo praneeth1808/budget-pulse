@@ -164,7 +164,8 @@ export default function BudgetPage(): JSX.Element {
   const toggleHeader = (): void => {
     setIsHeaderExpanded(!isHeaderExpanded);
   };
-
+  console.log("Here we go....");
+  console.log(budgetData);
   return (
     <View style={styles.container}>
       {/* Use BudgetHeader component and pass the expanded state */}
@@ -179,6 +180,7 @@ export default function BudgetPage(): JSX.Element {
           totalAmount={totalAmount} // Get totalAmount from JSON
           remainingAmount={remainingAmount} // Dynamically calculated remainingAmount
           onEditAmount={handleEditTotalAmount} // Handle edit for totalAmount
+          budgetData={budgetData} // Pass the budget data for reference
         />
       </View>
 

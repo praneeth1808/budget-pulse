@@ -1,11 +1,23 @@
 // /components/Budget/BudgetHeader.tsx
+
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  Platform,
+} from "react-native";
 import Icon from "react-native-vector-icons/Ionicons"; // Import Ionicons
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"; // Using MaterialCommunityIcons for edit icon
 import { LineChart } from "react-native-chart-kit"; // Assuming you're using 'react-native-chart-kit' for graphs
 import { Dimensions } from "react-native";
-import { Modal, TextInput } from "react-native"; // For edit modal
+import * as FileSystem from "expo-file-system"; // Import expo-file-system for downloading files
+import { TextInput } from "react-native"; // For edit modal
+
+// Check if we are on web or mobile
+const isWeb = Platform.OS === "web";
 
 const screenWidth = Dimensions.get("window").width; // Get screen width for responsive design
 const screenHeight = Dimensions.get("window").height; // Get screen height for relative scaling
@@ -16,15 +28,18 @@ export default function BudgetHeader({
   totalAmount,
   remainingAmount,
   onEditAmount,
+  budgetData, // Add budgetData as a prop to use in the download function
 }: {
   isExpanded: boolean;
   toggleExpanded: () => void;
   totalAmount: number;
   remainingAmount: number;
-  onEditAmount: (newTotalAmount: number) => void; // Updated to accept a number
+  onEditAmount: (newTotalAmount: number) => void;
+  budgetData: any; // Pass the budget data from the parent component
 }) {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [newAmount, setNewAmount] = useState<string>(totalAmount.toString()); // Hold the new amount as a string for input
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false); // State for upload/download modal
 
   // Handle saving the edited total amount
   const handleSaveEdit = () => {
@@ -33,6 +48,33 @@ export default function BudgetHeader({
       onEditAmount(numericAmount); // Pass the new total amount back to the parent component
     }
     setIsEditing(false); // Close the modal
+  };
+
+  // Function to download the budget data as a JSON file
+  const handleDownload = async () => {
+    console.log("Downloading budget data...");
+    console.log(budgetData); // Log the budget data to verify
+    const fileData = JSON.stringify(budgetData);
+    if (isWeb) {
+      // For web: create a download link and trigger it
+      const blob = new Blob([fileData], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "budgetData.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // For mobile: Save the file to the filesystem
+      const fileUri = FileSystem.documentDirectory + "budgetData.json";
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(budgetData), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      // Optionally add sharing functionality for mobile platforms
+      console.log("File saved at:", fileUri);
+    }
   };
 
   // Sample data for the graph (used when expanded)
@@ -78,14 +120,26 @@ export default function BudgetHeader({
           <Text style={styles.remainingAmount}>${remainingAmount}</Text>)
         </Text>
 
-        {/* Edit Button */}
-        <TouchableOpacity onPress={() => setIsEditing(true)}>
-          <MaterialCommunityIcons
-            name="briefcase-edit-outline"
-            size={screenWidth * 0.06}
-            color="#333"
-          />
-        </TouchableOpacity>
+        <View style={styles.iconGroup}>
+          {/* Edit Button */}
+          <TouchableOpacity onPress={() => setIsEditing(true)}>
+            <MaterialCommunityIcons
+              name="briefcase-edit-outline"
+              size={screenWidth * 0.06}
+              color="#333"
+            />
+          </TouchableOpacity>
+
+          {/* Upload/Download Button */}
+          <TouchableOpacity onPress={() => setIsModalVisible(true)}>
+            <MaterialCommunityIcons
+              name="file-upload-outline"
+              size={screenWidth * 0.06}
+              color="#333"
+              style={styles.iconSpacing}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Conditionally render the graph based on the expanded state */}
@@ -162,6 +216,42 @@ export default function BudgetHeader({
           </View>
         </Modal>
       )}
+
+      {/* Modal for upload/download functionality */}
+      {isModalVisible && (
+        <Modal transparent={true} visible={true} animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Upload/Download Budget Data</Text>
+
+              <View style={styles.uploadDownloadButtons}>
+                <TouchableOpacity
+                  style={[styles.uploadButton, styles.buttonSpacing]} // Adjusted space between buttons
+                  onPress={() => {
+                    // Handle upload logic here
+                    setIsModalVisible(false); // Close modal after action
+                  }}
+                >
+                  <Text style={styles.uploadButtonText}>Upload</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.downloadButton}
+                  onPress={handleDownload} // Trigger download functionality
+                >
+                  <Text style={styles.downloadButtonText}>Download</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.cancelButton, styles.centerCancelButton]}
+                onPress={() => setIsModalVisible(false)} // Close the modal
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </TouchableOpacity>
   );
 }
@@ -190,6 +280,13 @@ const styles = StyleSheet.create({
   remainingAmount: {
     color: "#ff0000", // Red for the remaining amount
     fontWeight: "bold",
+  },
+  iconGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconSpacing: {
+    marginLeft: screenWidth * 0.02, // Add some space between icons
   },
   graphStyle: {
     paddingBottom: 12, // Extra padding for X-axis labels
@@ -254,5 +351,36 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  uploadDownloadButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around", // Make buttons closer
+    marginBottom: 20,
+  },
+  uploadButton: {
+    backgroundColor: "#ffa500",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  uploadButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  downloadButton: {
+    backgroundColor: "#1e90ff",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  downloadButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  centerCancelButton: {
+    alignSelf: "center", // Center the cancel button
+  },
+  buttonSpacing: {
+    marginRight: screenWidth * 0.02, // Ensure there's some spacing between buttons
   },
 });
