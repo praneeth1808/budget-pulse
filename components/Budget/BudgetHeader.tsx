@@ -10,10 +10,12 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons"; // Import Ionicons
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"; // Using MaterialCommunityIcons for edit icon
-import { LineChart } from "react-native-chart-kit"; // Assuming you're using 'react-native-chart-kit' for graphs
+import { LineChart } from "react-native-chart-kit"; // For graphs
 import { Dimensions } from "react-native";
-import * as FileSystem from "expo-file-system"; // Import expo-file-system for downloading files
+import * as FileSystem from "expo-file-system"; // For reading and saving files (mobile)
+import * as DocumentPicker from "expo-document-picker"; // For mobile file upload
 import * as Sharing from "expo-sharing";
+import { DocumentPickerResult } from "expo-document-picker";
 
 const isWeb = Platform.OS === "web";
 
@@ -27,6 +29,7 @@ export default function BudgetHeader({
   remainingAmount,
   onEditAmount,
   budgetData,
+  onUpload, // Add the new prop to handle file uploads
 }: {
   isExpanded: boolean;
   toggleExpanded: () => void;
@@ -34,6 +37,7 @@ export default function BudgetHeader({
   remainingAmount: number;
   onEditAmount: (newTotalAmount: number) => void;
   budgetData: any;
+  onUpload: (newBudgetData: any) => void; // Handle the uploaded file
 }) {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [newAmount, setNewAmount] = useState<string>(totalAmount.toString()); // Hold the new amount as a string for input
@@ -42,7 +46,7 @@ export default function BudgetHeader({
   // Effect to update newAmount whenever isEditing is triggered
   useEffect(() => {
     if (isEditing) {
-      setNewAmount(totalAmount.toString()); // Update the amount to current total when editing is initiated
+      setNewAmount(totalAmount.toString());
     }
   }, [isEditing, totalAmount]);
 
@@ -52,14 +56,14 @@ export default function BudgetHeader({
     if (!isNaN(numericAmount)) {
       onEditAmount(numericAmount); // Pass the new total amount back to the parent component
     }
-    setIsEditing(false); // Close the modal
+    setIsEditing(false);
   };
 
   // Function to download the budget data as a JSON file
   const handleDownload = async () => {
     const fileData = JSON.stringify(budgetData);
 
-    if (Platform.OS === "web") {
+    if (isWeb) {
       const blob = new Blob([fileData], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -88,6 +92,55 @@ export default function BudgetHeader({
     }
   };
 
+  const handleUpload = async () => {
+    if (isWeb) {
+      // Handle file upload on web
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "application/json";
+      fileInput.onchange = async (event: any) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const uploadedData = JSON.parse(e.target?.result as string);
+              onUpload(uploadedData); // Pass the data to the parent component
+            } catch (error) {
+              console.error("Error parsing uploaded JSON:", error);
+            }
+          };
+          reader.readAsText(file);
+        }
+      };
+      fileInput.click();
+    } else {
+      // Handle file upload on mobile
+      try {
+        const result = await DocumentPicker.getDocumentAsync({
+          type: "application/json",
+        });
+
+        if (result && result.assets && result.assets.length > 0) {
+          // Read the file content using the URI from the result
+          const fileContent = await FileSystem.readAsStringAsync(
+            result.assets[0].uri
+          );
+          try {
+            const uploadedData = JSON.parse(fileContent);
+            onUpload(uploadedData); // Pass the parsed JSON data to the parent component
+          } catch (error) {
+            console.error("Error parsing uploaded JSON:", error);
+          }
+        } else {
+          console.log("DocumentPicker canceled or failed");
+        }
+      } catch (error) {
+        console.error("Error picking document:", error);
+      }
+    }
+  };
+
   // Sample data for the graph (used when expanded)
   const data = {
     labels: [
@@ -109,8 +162,8 @@ export default function BudgetHeader({
         data: [
           500, 600, 700, 1000, 950, 1100, 900, 1200, 1300, 1250, 1400, 1500,
         ],
-        color: () => `rgba(0, 160, 0, 0.4)`, // Lighter green tone for the graph line
-        strokeWidth: 1, // Decrease line width for lighter appearance
+        color: () => `rgba(0, 160, 0, 0.4)`,
+        strokeWidth: 1,
       },
     ],
   };
@@ -163,10 +216,7 @@ export default function BudgetHeader({
               labelColor: () => `#333`,
               decimalPlaces: 0,
               strokeWidth: 1,
-              propsForDots: {
-                r: "2",
-                strokeWidth: "0",
-              },
+              propsForDots: { r: "2", strokeWidth: "0" },
               propsForVerticalLabels: { fontSize: 8 },
               propsForHorizontalLabels: { fontSize: 8 },
             }}
@@ -225,7 +275,7 @@ export default function BudgetHeader({
               <View style={styles.uploadDownloadButtons}>
                 <TouchableOpacity
                   style={[styles.uploadButton, styles.buttonSpacing]}
-                  onPress={() => setIsModalVisible(false)}
+                  onPress={handleUpload} // Trigger the upload functionality
                 >
                   <Text style={styles.uploadButtonText}>Upload</Text>
                 </TouchableOpacity>

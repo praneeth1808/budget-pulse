@@ -90,6 +90,18 @@ export default function BudgetPage(): JSX.Element {
     }
   };
 
+  // Add this in BudgetPage.tsx (parent component)
+  const handleUpload = (uploadedData: any) => {
+    // Update the budgetData with the uploaded file's data
+    setTotalAmount(uploadedData.totalAmount);
+    setComponents(
+      uploadedData.goals.map((goal: any) => ({
+        ...goal,
+        type: goal.type as "Goal" | "Want" | "EmergencyFund",
+      }))
+    );
+  };
+
   // Call the load function when the component mounts based on the platform
   useEffect(() => {
     if (Platform.OS === "web") {
@@ -240,6 +252,7 @@ export default function BudgetPage(): JSX.Element {
           totalAmount={totalAmount} // Get totalAmount from JSON
           remainingAmount={remainingAmount} // Dynamically calculated remainingAmount
           onEditAmount={handleEditTotalAmount} // Handle edit for totalAmount
+          onUpload={handleUpload}
           budgetData={{ totalAmount, goals: components }}
         />
       </View>
