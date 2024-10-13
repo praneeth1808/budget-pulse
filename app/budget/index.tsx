@@ -1,5 +1,5 @@
 // /app/budget/index.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -12,76 +12,24 @@ import BudgetComponents from "@/components/Budget/BudgetComponents"; // Updated 
 import BudgetEditModal from "@/components/Budget/BudgetEditModal"; // Updated path for BudgetEditModal component
 import Icon from "react-native-vector-icons/Ionicons"; // Import Ionicons for add button
 
+// Import the JSON file for budget data
+import budgetData from "@/assets/data/budgetData.json"; // Ensure the path is correct
+
 const screenWidth = Dimensions.get("window").width;
 const screenHeight = Dimensions.get("window").height;
-
-// Define a type for modalData
-interface ModalData {
-  title: string;
-  allocatedAmount: number;
-  targetAmount: number;
-  targetDate: string;
-  type: "Goal" | "Want" | "EmergencyFund";
-  index?: number; // Optional index
-}
 
 export default function BudgetPage(): JSX.Element {
   const [isHeaderExpanded, setIsHeaderExpanded] = useState<boolean>(false); // State to manage the header's expand/collapse
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false); // State for modal visibility
-  const [modalData, setModalData] = useState<ModalData | null>(null); // Data for the currently editing component
+  const [modalData, setModalData] = useState<any>(null); // Data for the currently editing component
   const [isNewGoal, setIsNewGoal] = useState<boolean>(false); // State for adding a new goal
+  const [components, setComponents] = useState<any[]>([]); // State for budget components
 
-  const [components, setComponents] = useState([
-    {
-      title: "Saving for a Car",
-      allocatedAmount: 300,
-      targetAmount: 500,
-      targetDate: "Dec 2024",
-      type: "Goal",
-    },
-    {
-      title: "Vacation Fund",
-      allocatedAmount: 200,
-      targetAmount: 300,
-      targetDate: "Nov 2024",
-      type: "Goal",
-    },
-    {
-      title: "New Laptop",
-      allocatedAmount: 100,
-      targetAmount: 500,
-      targetDate: "Oct 2024",
-      type: "Want",
-    },
-    {
-      title: "Emergency Savings",
-      allocatedAmount: 150,
-      targetAmount: 200,
-      targetDate: "Jan 2025",
-      type: "EmergencyFund",
-    },
-    {
-      title: "Home Renovation",
-      allocatedAmount: 500,
-      targetAmount: 1000,
-      targetDate: "Aug 2025",
-      type: "Goal",
-    },
-    {
-      title: "Wedding Expenses",
-      allocatedAmount: 400,
-      targetAmount: 1500,
-      targetDate: "May 2025",
-      type: "Want",
-    },
-    {
-      title: "College Fund",
-      allocatedAmount: 800,
-      targetAmount: 2000,
-      targetDate: "Dec 2026",
-      type: "EmergencyFund",
-    },
-  ]);
+  // Load the data from the JSON file when the component mounts
+  useEffect(() => {
+    // You can use budgetData directly since it's already imported
+    setComponents(budgetData.components);
+  }, []);
 
   // Function to handle adding an amount
   const handleAddAmount = (index: number): void => {
@@ -108,12 +56,12 @@ export default function BudgetPage(): JSX.Element {
   // Function to open the modal for editing
   const handleEditComponent = (index: number): void => {
     setIsNewGoal(false);
-    setModalData({ ...components[index], index } as ModalData); // Add type assertion
+    setModalData({ ...components[index], index });
     setIsModalVisible(true);
   };
 
   // Function to save the updated component
-  const handleSaveComponent = (updatedComponent: ModalData): void => {
+  const handleSaveComponent = (updatedComponent: any): void => {
     if (isNewGoal) {
       setComponents([...components, updatedComponent]); // Add a new goal
     } else if (updatedComponent.index !== undefined) {

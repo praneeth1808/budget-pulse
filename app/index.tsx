@@ -48,19 +48,37 @@ export default function WelcomeScreen() {
           </ThemedText>
         </View>
 
-        {/* Key Features */}
+        {/* Key Features (Numbered List) */}
         <View style={styles.section}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Key Features
           </ThemedText>
-          <ThemedText type="default" style={styles.bodyText}>
-            - Manage and categorize your expenses efficiently.
-            <br />
-            - Set financial goals and track your progress.
-            <br />
-            - Allocate funds for emergency situations.
-            <br />- Visualize your budget with charts and analytics.
-          </ThemedText>
+
+          {/* Numbered List */}
+          <View style={styles.listItem}>
+            <ThemedText style={styles.bullet}>1.</ThemedText>
+            <ThemedText type="default" style={styles.itemText}>
+              Manage and categorize your expenses efficiently.
+            </ThemedText>
+          </View>
+          <View style={styles.listItem}>
+            <ThemedText style={styles.bullet}>2.</ThemedText>
+            <ThemedText type="default" style={styles.itemText}>
+              Set financial goals and track your progress.
+            </ThemedText>
+          </View>
+          <View style={styles.listItem}>
+            <ThemedText style={styles.bullet}>3.</ThemedText>
+            <ThemedText type="default" style={styles.itemText}>
+              Allocate funds for emergency situations.
+            </ThemedText>
+          </View>
+          <View style={styles.listItem}>
+            <ThemedText style={styles.bullet}>4.</ThemedText>
+            <ThemedText type="default" style={styles.itemText}>
+              Visualize your budget with charts and analytics.
+            </ThemedText>
+          </View>
         </View>
 
         {/* Why Budget with Us Section */}
@@ -102,9 +120,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 20,
+    width: 70,
+    height: 70,
+    marginBottom: 10,
     resizeMode: "contain",
   },
   introContainer: {
@@ -136,8 +154,24 @@ const styles = StyleSheet.create({
     textAlign: "left", // Ensure body text is left aligned
     paddingHorizontal: 15,
   },
+
+  // List styles
+  listItem: {
+    flexDirection: "row",
+    marginBottom: 10, // Adds space between list items
+    alignItems: "center",
+  },
+  bullet: {
+    fontSize: 15, // Font size for the bullet (number)
+    marginRight: 10,
+  },
+  itemText: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+
   getStartedButton: {
-    marginTop: 30,
+    marginTop: 10,
     paddingVertical: 15,
     paddingHorizontal: 40,
     backgroundColor: "#00a000",
