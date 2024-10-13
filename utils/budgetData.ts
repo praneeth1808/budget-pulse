@@ -20,6 +20,8 @@ export async function writeBudgetData(data: any): Promise<void> {
     console.log("Budget data updated successfully.");
   } catch (error) {
     console.error("Error updating budget data:", error);
+  } finally {
+    readBudgetData();
   }
 }
 
@@ -29,10 +31,14 @@ export async function readBudgetData(): Promise<any> {
     if (Platform.OS === "web") {
       // Read from localStorage for the web
       const jsonData = localStorage.getItem("budgetData");
+      console.log("Budget data read successfully.");
+      console.log(jsonData);
       return jsonData ? JSON.parse(jsonData) : null;
     } else {
       // Read from file system for native platforms
       const jsonData = await FileSystem.readAsStringAsync(BUDGET_DATA_PATH);
+      console.log("Budget data read successfully.");
+      console.log(jsonData);
       return JSON.parse(jsonData);
     }
   } catch (error) {
