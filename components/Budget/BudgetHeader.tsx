@@ -1,6 +1,4 @@
-// /components/Budget/BudgetHeader.tsx
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   Platform,
+  TextInput,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons"; // Import Ionicons
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons"; // Using MaterialCommunityIcons for edit icon
@@ -15,13 +14,11 @@ import { LineChart } from "react-native-chart-kit"; // Assuming you're using 're
 import { Dimensions } from "react-native";
 import * as FileSystem from "expo-file-system"; // Import expo-file-system for downloading files
 import * as Sharing from "expo-sharing";
-import { TextInput } from "react-native"; // For edit modal
 
-// Check if we are on web or mobile
 const isWeb = Platform.OS === "web";
 
-const screenWidth = Dimensions.get("window").width; // Get screen width for responsive design
-const screenHeight = Dimensions.get("window").height; // Get screen height for relative scaling
+const screenWidth = Dimensions.get("window").width;
+const screenHeight = Dimensions.get("window").height;
 
 export default function BudgetHeader({
   isExpanded,
@@ -29,18 +26,25 @@ export default function BudgetHeader({
   totalAmount,
   remainingAmount,
   onEditAmount,
-  budgetData, // Add budgetData as a prop to use in the download function
+  budgetData,
 }: {
   isExpanded: boolean;
   toggleExpanded: () => void;
   totalAmount: number;
   remainingAmount: number;
   onEditAmount: (newTotalAmount: number) => void;
-  budgetData: any; // Pass the budget data from the parent component
+  budgetData: any;
 }) {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [newAmount, setNewAmount] = useState<string>(totalAmount.toString()); // Hold the new amount as a string for input
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false); // State for upload/download modal
+
+  // Effect to update newAmount whenever isEditing is triggered
+  useEffect(() => {
+    if (isEditing) {
+      setNewAmount(totalAmount.toString()); // Update the amount to current total when editing is initiated
+    }
+  }, [isEditing, totalAmount]);
 
   // Handle saving the edited total amount
   const handleSaveEdit = () => {
@@ -53,12 +57,9 @@ export default function BudgetHeader({
 
   // Function to download the budget data as a JSON file
   const handleDownload = async () => {
-    console.log("Downloading budget data...");
-    console.log(budgetData); // Log the budget data to verify
     const fileData = JSON.stringify(budgetData);
 
     if (Platform.OS === "web") {
-      // For web: create a download link and trigger it
       const blob = new Blob([fileData], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -69,25 +70,18 @@ export default function BudgetHeader({
       document.body.removeChild(link);
     } else {
       try {
-        // For mobile: Save the file to the filesystem
         const fileUri = FileSystem.documentDirectory + "budgetData.json";
-
         await FileSystem.writeAsStringAsync(fileUri, fileData, {
           encoding: FileSystem.EncodingType.UTF8,
         });
 
-        // Share the file using the expo-sharing module
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
             mimeType: "application/json",
             dialogTitle: "Download your budget data",
-            UTI: "public.json", // Uniform Type Identifier for JSON
+            UTI: "public.json",
           });
-        } else {
-          console.log("Sharing is not available on this device.");
         }
-
-        console.log("File saved at:", fileUri);
       } catch (error) {
         console.error("Error saving the file:", error);
       }
@@ -127,18 +121,16 @@ export default function BudgetHeader({
       activeOpacity={1}
       style={[
         styles.headerContainer,
-        { height: isExpanded ? screenHeight * 0.35 : screenHeight * 0.15 }, // Adjust height dynamically
+        { height: isExpanded ? screenHeight * 0.35 : screenHeight * 0.15 },
       ]}
     >
       <View style={styles.topRow}>
-        {/* Total Saved with Remaining Amount */}
         <Text style={styles.totalSavedText}>
           Total Saved: <Text style={styles.totalAmount}>${totalAmount}</Text> (
           <Text style={styles.remainingAmount}>${remainingAmount}</Text>)
         </Text>
 
         <View style={styles.iconGroup}>
-          {/* Edit Button */}
           <TouchableOpacity onPress={() => setIsEditing(true)}>
             <MaterialCommunityIcons
               name="briefcase-edit-outline"
@@ -147,7 +139,6 @@ export default function BudgetHeader({
             />
           </TouchableOpacity>
 
-          {/* Upload/Download Button */}
           <TouchableOpacity onPress={() => setIsModalVisible(true)}>
             <MaterialCommunityIcons
               name="file-upload-outline"
@@ -159,51 +150,42 @@ export default function BudgetHeader({
         </View>
       </View>
 
-      {/* Conditionally render the graph based on the expanded state */}
       {isExpanded && (
         <View style={styles.graphContainer}>
           <LineChart
             data={data}
-            width={screenWidth * 0.85} // Width now relative to the screen width
-            height={screenHeight * 0.2} // Reduced height to make the graph smaller
+            width={screenWidth * 0.85}
+            height={screenHeight * 0.2}
             chartConfig={{
               backgroundGradientFrom: "#f5f5f5",
               backgroundGradientTo: "#f5f5f5",
-              color: () => `rgba(0, 160, 0, 0.4)`, // Lighter green tone for the graph
-              labelColor: () => `#333`, // Ensure label color is visible
+              color: () => `rgba(0, 160, 0, 0.4)`,
+              labelColor: () => `#333`,
               decimalPlaces: 0,
-              strokeWidth: 1, // Decrease the line width for a lighter appearance
+              strokeWidth: 1,
               propsForDots: {
-                r: "2", // Decrease dot size
-                strokeWidth: "0", // Remove the dot border
-                stroke: "none", // Remove the stroke for lighter dots
+                r: "2",
+                strokeWidth: "0",
               },
-              // Y-axis and X-axis label font size adjustment
-              propsForVerticalLabels: {
-                fontSize: 8, // Very small font for Y-axis labels
-              },
-              propsForHorizontalLabels: {
-                fontSize: 8, // Very small font for X-axis labels
-              },
+              propsForVerticalLabels: { fontSize: 8 },
+              propsForHorizontalLabels: { fontSize: 8 },
             }}
-            bezier // Smoothens the graph lines
-            withVerticalLines={false} // Remove vertical grid lines
-            withHorizontalLines={false} // Remove horizontal grid lines
-            withHorizontalLabels={true} // Ensure X-axis labels are visible
+            bezier
+            withVerticalLines={false}
+            withHorizontalLines={false}
+            withHorizontalLabels={true}
             style={styles.graphStyle}
           />
         </View>
       )}
 
-      {/* Expand/Collapse Indicator */}
       <Icon
         name={isExpanded ? "chevron-up-outline" : "chevron-down-outline"}
-        size={screenWidth * 0.04} // Smaller arrow icon size
+        size={screenWidth * 0.04}
         color="#333"
         style={styles.expandCollapseIcon}
       />
 
-      {/* Modal for editing the total amount */}
       {isEditing && (
         <Modal transparent={true} visible={true} animationType="slide">
           <View style={styles.modalOverlay}>
@@ -234,7 +216,6 @@ export default function BudgetHeader({
         </Modal>
       )}
 
-      {/* Modal for upload/download functionality */}
       {isModalVisible && (
         <Modal transparent={true} visible={true} animationType="slide">
           <View style={styles.modalOverlay}>
@@ -243,17 +224,14 @@ export default function BudgetHeader({
 
               <View style={styles.uploadDownloadButtons}>
                 <TouchableOpacity
-                  style={[styles.uploadButton, styles.buttonSpacing]} // Adjusted space between buttons
-                  onPress={() => {
-                    // Handle upload logic here
-                    setIsModalVisible(false); // Close modal after action
-                  }}
+                  style={[styles.uploadButton, styles.buttonSpacing]}
+                  onPress={() => setIsModalVisible(false)}
                 >
                   <Text style={styles.uploadButtonText}>Upload</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.downloadButton}
-                  onPress={handleDownload} // Trigger download functionality
+                  onPress={handleDownload}
                 >
                   <Text style={styles.downloadButtonText}>Download</Text>
                 </TouchableOpacity>
@@ -261,7 +239,7 @@ export default function BudgetHeader({
 
               <TouchableOpacity
                 style={[styles.cancelButton, styles.centerCancelButton]}
-                onPress={() => setIsModalVisible(false)} // Close the modal
+                onPress={() => setIsModalVisible(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
@@ -275,27 +253,27 @@ export default function BudgetHeader({
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingVertical: screenHeight * 0.005, // Reduced padding to utilize space
-    paddingHorizontal: screenWidth * 0.03, // Reduced padding for better space utilization
+    paddingVertical: screenHeight * 0.005,
+    paddingHorizontal: screenWidth * 0.03,
     width: "100%",
   },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: screenHeight * 0.005, // Reduced margin for less empty space
+    marginBottom: screenHeight * 0.005,
   },
   totalSavedText: {
-    fontSize: screenWidth * 0.045, // Font size relative to screen width
+    fontSize: screenWidth * 0.045,
     fontWeight: "bold",
-    color: "#333", // Black for "Total Saved:"
+    color: "#333",
   },
   totalAmount: {
-    color: "#00a000", // Green for the total amount
+    color: "#00a000",
     fontWeight: "bold",
   },
   remainingAmount: {
-    color: "#ff0000", // Red for the remaining amount
+    color: "#ff0000",
     fontWeight: "bold",
   },
   iconGroup: {
@@ -303,10 +281,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconSpacing: {
-    marginLeft: screenWidth * 0.02, // Add some space between icons
+    marginLeft: screenWidth * 0.02,
   },
   graphStyle: {
-    paddingBottom: 12, // Extra padding for X-axis labels
+    paddingBottom: 12,
     borderRadius: 10,
   },
   graphContainer: {
@@ -315,8 +293,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   expandCollapseIcon: {
-    alignSelf: "center", // Center the expand/collapse icon
-    marginTop: screenHeight * 0.005, // Reduced margin to minimize space
+    alignSelf: "center",
+    marginTop: screenHeight * 0.005,
   },
   modalOverlay: {
     flex: 1,
@@ -371,7 +349,7 @@ const styles = StyleSheet.create({
   },
   uploadDownloadButtons: {
     flexDirection: "row",
-    justifyContent: "space-around", // Make buttons closer
+    justifyContent: "space-around",
     marginBottom: 20,
   },
   uploadButton: {
@@ -395,9 +373,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   centerCancelButton: {
-    alignSelf: "center", // Center the cancel button
+    alignSelf: "center",
   },
   buttonSpacing: {
-    marginRight: screenWidth * 0.02, // Ensure there's some spacing between buttons
+    marginRight: screenWidth * 0.02,
   },
 });
